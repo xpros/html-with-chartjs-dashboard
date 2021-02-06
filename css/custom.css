@@ -1,0 +1,12 @@
+canvas {
+  border: 1px dotted purple;  
+}
+
+.chart-container {
+  position: relative;
+  margin: auto;
+  height: 80vh;
+  width: 80vw;
+  padding: 15px;
+  max-width: 1500px;
+}

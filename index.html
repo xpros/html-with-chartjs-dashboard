@@ -2,11 +2,15 @@
 <html>
   <head>
     <title>Line Chart</title>
-    <script src="./js/jquery-3.5.1.min.js"></script>
-    <script src="./js/jquery.csv.min.js"></script>
-    <script src="./js/moment.min.js"></script>
-    <script src="./js/Chart.min.js"></script>
-    <script src="./js/utils.js"></script>
+    <script src="js/jquery-3.5.1.min.js"></script>
+    <script src="js/jquery.csv.min.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/Chart.min.js"></script>
+    <script src="js/hammer.min.js"></script>
+    <script src="js/chartjs-plugin-zoom.min.js"></script>
+    <script src="js/utils.js"></script>
+    <link rel="stylesheet" href="css/custom.css" />
+
     <style>
       canvas {
         -moz-user-select: none;
@@ -16,20 +20,19 @@
     </style>
   </head>
   <body>
-    <div style="width:1000px">
+    <div class="chart-container">
       <canvas id="myChart"></canvas>
+      <br>
+      <br>
+      Chart Display By:
+      <select id="unit">
+        <option value="day" selected>Day</option>
+        <option value="month">Month</option>
+        <option value="quarter">Quarter</option>
+        <option value="year">Year</option>
+      </select>
+      <button id="update">update</button>
     </div>
-    <br>
-    <br>
-    Chart Display By:
-    <select id="unit">
-      <option value="day" selected>Day</option>
-      <option value="week" selected>Week</option>
-      <option value="month">Month</option>
-      <option value="quarter" selected>Quarter</option>
-      <option value="year">Year</option>
-    </select>
-    <button id="update">update</button>
     <script>
       function handleCSVData(data) {
         var datasetSubscriptionsConsumedList = [];
@@ -42,85 +45,132 @@
           consumedObj['t'] = myMoment;
           consumedObj['y'] = obj.consumed;
           capacityObj['t'] = myMoment;
-          capacityObj['y'] = obj.capacity;
+          capacityObj['y'] = parseInt(obj.capacity/2);
           datasetSubscriptionsConsumedList.push(consumedObj);
           datasetSubscriptionsCapacityList.push(capacityObj);
         });
-        console.log(datasetSubscriptionsConsumedList);
-        console.log(datasetSubscriptionsCapacityList);
-
-        console.log(myChart);
         myChart.data.datasets[0].data = datasetSubscriptionsConsumedList;
         myChart.data.datasets[1].data = datasetSubscriptionsCapacityList;
         myChart.update();
       }
 
       var ctx = document.getElementById('myChart').getContext('2d');
-      ctx.canvas.width = 1000;
-      ctx.canvas.height = 300;
+//      ctx.canvas.width = 1000;
+//      ctx.canvas.height = 600;
+
+      // Define Chart Default Configuration (global)
+      Chart.defaults.global.animation.duration = 0;
+      Chart.defaults.line.spanGaps = true;
+      console.log(Chart.defaults);
 
       var color = Chart.helpers.color;
       var myChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
           datasets: [{
             label: 'Subscriptions Consumed',
             data: [],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
             borderWidth: 1,
-            steppedLine: true
+            backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
+            borderColor: window.chartColors.blue,
+            fill: false,
+//            lineTension: 0,
+            borderWidth: 2,
+            pointRadius: 0,
           }, {
             label: 'Subscriptions Capacity',
             data: [],
             type: 'line',
-            steppedLine: true
+            backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
+            borderColor: window.chartColors.red,
+            steppedLine: true,
+            fill: false,
+//            lineTension: 0,
+            borderWidth: 2,
+            pointRadius: 0,
           }]
         },
-        options: {},
-      });
-
-      myChart.options = {
-        animation: {
-          duration: 0
-        },
-        scales: {
-          xAxes: [{
-            type: 'time',
-            distribution: 'series',
-            time: {
-              unit: 'quarter',
-              displayFormats: {
-                day: 'MMM DD YYYY',
-                quarter: 'MMM YYYY'
+        options: {
+          scales: {
+            xAxes: [{
+              type: 'time',
+              distribution: 'series',
+              offset: true,
+              ticks: {
+                source: 'data',
+                autoSkip: true,
+                autoSkipPadding: 75,
+                maxRotation: 0,
+                sampleSize: 100
+              },
+              time: {
+                unit: 'day',
+                displayFormats: {
+                  day: 'MMM D, YYYY',
+                }
+              },
+            }],
+            yAxes: [{
+              gridLines: {
+                drawBorder: false
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Number of Subscriptions'
+              },
+              ticks: {
+                source: 'data',
+                autoSkip: true,
+                autoSkipPadding: 75,
+                maxRotation: 0,
+                sampleSize: 100
+              },
+            }]
+          },
+          title: {
+            display: true,
+            text: 'Ansible Subscriptions'
+          },
+          tooltips: {
+            intersect: false,
+            mode: 'index',
+            callbacks: {
+              label: function(tooltipItem, myData) {
+                var label = myData.datasets[tooltipItem.datasetIndex].label || '';
+                if (label) {
+                  label += ': ';
+                }
+                label += parseFloat(tooltipItem.value).toFixed(2);
+                return label;
               }
             }
-          }],
-          yAxes: [{
-            ticks: {
-              beginAtZero: true
+          },
+          plugins: {
+            zoom: {
+              // Container for pan options
+              pan: {
+                // Boolean to enable panning
+                enabled: true,
+                // Panning directions. Remove the appropriate direction to disable
+                // Eg. 'y' would only allow panning in the y direction
+                mode: 'x'
+              },
+              // Container for zoom options
+              zoom: {
+                // Boolean to enable zooming
+                enabled: true,
+                // Zooming directions. Remove the appropriate direction to disable
+                // Eg. 'y' would only allow zooming in the y direction
+                mode: 'x',
+              }
             }
-          }]
+          }
         }
-      }
+      });
 
       var jqxhr = $.ajax({
         type: "GET",
-        url: "https://raw.githubusercontent.com/xpros/html-with-chartjs-dashboard/main/data/test-data.csv",
+        url: "https://raw.githubusercontent.com/xpros/html-with-chartjs-dashboard/main/test-data/test-data.csv",
         dataType: "text"
       }).done(function(response, textStatus, jqXHR) {
         var data = $.csv.toObjects(response);
@@ -129,10 +179,10 @@
 
       document.getElementById('update').addEventListener('click', function() {
         var unit = document.getElementById('unit').value;
-        console.log(unit);
         myChart.options.scales.xAxes[0].time.unit = unit;
         myChart.update();
       });
     </script>
   </body>
 </html>
+
