@@ -21,10 +21,7 @@
   </head>
   <body>
     <div class="chart-container">
-      <canvas id="myChart"></canvas>
-      <br>
-      <br>
-      Chart Display By:
+      Show Time By:
       <select id="unit">
         <option value="day" selected>Day</option>
         <option value="month">Month</option>
@@ -32,9 +29,16 @@
         <option value="year">Year</option>
       </select>
       <button id="update">update</button>
+      <br>
+      <br>
+      <canvas id="myChart"></canvas>
     </div>
     <script>
+      var myChart;
       function handleCSVData(data) {
+        console.log("at beginning of: handleCSVData");
+        console.log(myDatasetsObj);
+        var myDatasetsObj = {}
         var datasetSubscriptionsConsumedList = [];
         var datasetSubscriptionsCapacityList = [];
 
@@ -49,124 +53,12 @@
           datasetSubscriptionsConsumedList.push(consumedObj);
           datasetSubscriptionsCapacityList.push(capacityObj);
         });
-        myChart.data.datasets[0].data = datasetSubscriptionsConsumedList;
-        myChart.data.datasets[1].data = datasetSubscriptionsCapacityList;
-        myChart.update();
+        myDatasetsObj['consumed'] = datasetSubscriptionsConsumedList;
+        myDatasetsObj['capacity'] = datasetSubscriptionsCapacityList;
+        console.log("at end of; handleCSVData")
+        console.log(myDatasetsObj);
+        return myDatasetsObj
       }
-
-      var ctx = document.getElementById('myChart').getContext('2d');
-//      ctx.canvas.width = 1000;
-//      ctx.canvas.height = 600;
-
-      // Define Chart Default Configuration (global)
-      Chart.defaults.global.animation.duration = 0;
-      Chart.defaults.line.spanGaps = true;
-      console.log(Chart.defaults);
-
-      var color = Chart.helpers.color;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets: [{
-            label: 'Subscriptions Consumed',
-            data: [],
-            borderWidth: 1,
-            backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
-            borderColor: window.chartColors.blue,
-            fill: false,
-//            lineTension: 0,
-            borderWidth: 2,
-            pointRadius: 0,
-          }, {
-            label: 'Subscriptions Capacity',
-            data: [],
-            type: 'line',
-            backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
-            borderColor: window.chartColors.red,
-            steppedLine: true,
-            fill: false,
-//            lineTension: 0,
-            borderWidth: 2,
-            pointRadius: 0,
-          }]
-        },
-        options: {
-          scales: {
-            xAxes: [{
-              type: 'time',
-              distribution: 'series',
-              offset: true,
-              ticks: {
-                source: 'data',
-                autoSkip: true,
-                autoSkipPadding: 75,
-                maxRotation: 0,
-                sampleSize: 100
-              },
-              time: {
-                unit: 'day',
-                displayFormats: {
-                  day: 'MMM D, YYYY',
-                }
-              },
-            }],
-            yAxes: [{
-              gridLines: {
-                drawBorder: false
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Number of Subscriptions'
-              },
-              ticks: {
-                source: 'data',
-                autoSkip: true,
-                autoSkipPadding: 75,
-                maxRotation: 0,
-                sampleSize: 100
-              },
-            }]
-          },
-          title: {
-            display: true,
-            text: 'Ansible Subscriptions'
-          },
-          tooltips: {
-            intersect: false,
-            mode: 'index',
-            callbacks: {
-              label: function(tooltipItem, myData) {
-                var label = myData.datasets[tooltipItem.datasetIndex].label || '';
-                if (label) {
-                  label += ': ';
-                }
-                label += parseFloat(tooltipItem.value).toFixed(2);
-                return label;
-              }
-            }
-          },
-          plugins: {
-            zoom: {
-              // Container for pan options
-              pan: {
-                // Boolean to enable panning
-                enabled: true,
-                // Panning directions. Remove the appropriate direction to disable
-                // Eg. 'y' would only allow panning in the y direction
-                mode: 'x'
-              },
-              // Container for zoom options
-              zoom: {
-                // Boolean to enable zooming
-                enabled: true,
-                // Zooming directions. Remove the appropriate direction to disable
-                // Eg. 'y' would only allow zooming in the y direction
-                mode: 'x',
-              }
-            }
-          }
-        }
-      });
 
       var jqxhr = $.ajax({
         type: "GET",
@@ -174,9 +66,125 @@
         dataType: "text"
       }).done(function(response, textStatus, jqXHR) {
         var data = $.csv.toObjects(response);
-        handleCSVData(data);
-      });
+        var myDatasetsObj = handleCSVData(data);
+        console.log('in: body');
+        console.log(myDatasetsObj);
 
+        var ctx = document.getElementById('myChart').getContext('2d');
+//        ctx.canvas.width = 1000;
+//        ctx.canvas.height = 600;
+
+        // Define Chart Default Configuration (global)
+        Chart.defaults.global.animation.duration = 0;
+        Chart.defaults.line.spanGaps = true;
+        console.log(Chart.defaults);
+
+        var color = Chart.helpers.color;
+        var cfg = {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: 'Subscriptions Consumed',
+              data: myDatasetsObj['consumed'],
+              borderWidth: 1,
+              backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
+              borderColor: window.chartColors.blue,
+              fill: false,
+  //            lineTension: 0,
+              borderWidth: 2,
+              pointRadius: 0,
+            }, {
+              label: 'Subscriptions Capacity',
+              data: myDatasetsObj['capacity'],
+              type: 'line',
+              backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
+              borderColor: window.chartColors.red,
+              steppedLine: true,
+              fill: false,
+  //            lineTension: 0,
+              borderWidth: 2,
+              pointRadius: 0,
+            }]
+          },
+          options: {
+            scales: {
+              xAxes: [{
+                type: 'time',
+                distribution: 'series',
+                offset: true,
+                ticks: {
+                  source: 'data',
+                  autoSkip: true,
+                  autoSkipPadding: 75,
+                  maxRotation: 0,
+                  sampleSize: 100
+                },
+                time: {
+                  unit: 'day',
+                  displayFormats: {
+                    day: 'MMM D, YYYY',
+                  }
+                },
+              }],
+              yAxes: [{
+                gridLines: {
+                  drawBorder: false
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Number of Subscriptions'
+                },
+                ticks: {
+                  source: 'data',
+                  autoSkip: true,
+                  autoSkipPadding: 75,
+                  maxRotation: 0,
+                  sampleSize: 100
+                },
+              }]
+            },
+            title: {
+              display: true,
+              text: 'Ansible Subscriptions'
+            },
+            tooltips: {
+              intersect: false,
+              mode: 'index',
+              callbacks: {
+                label: function(tooltipItem, myData) {
+                  var label = myData.datasets[tooltipItem.datasetIndex].label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += parseFloat(tooltipItem.value).toFixed(2);
+                  return label;
+                }
+              }
+            },
+            plugins: {
+              zoom: {
+                // Container for pan options
+                pan: {
+                  // Boolean to enable panning
+                  enabled: true,
+                  // Panning directions. Remove the appropriate direction to disable
+                  // Eg. 'y' would only allow panning in the y direction
+                  mode: 'x'
+                },
+                // Container for zoom options
+                zoom: {
+                  // Boolean to enable zooming
+                  enabled: true,
+                  // Zooming directions. Remove the appropriate direction to disable
+                  // Eg. 'y' would only allow zooming in the y direction
+                  mode: 'x',
+                }
+              }
+            }
+          }
+        };
+        myChart = new Chart(ctx, cfg)
+      });
       document.getElementById('update').addEventListener('click', function() {
         var unit = document.getElementById('unit').value;
         myChart.options.scales.xAxes[0].time.unit = unit;
