@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Line Chart</title>
+    <script src="./js/jquery-3.5.1.min.js"></script>
+    <script src="./js/jquery.csv.min.js"></script>
+    <script src="./js/moment.min.js"></script>
+    <script src="./js/Chart.min.js"></script>
+    <script src="./js/utils.js"></script>
+    <style>
+      canvas {
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="width:1000px">
+      <canvas id="myChart"></canvas>
+    </div>
+    <br>
+    <br>
+    Chart Display By:
+    <select id="unit">
+      <option value="day" selected>Day</option>
+      <option value="week" selected>Week</option>
+      <option value="month">Month</option>
+      <option value="quarter" selected>Quarter</option>
+      <option value="year">Year</option>
+    </select>
+    <button id="update">update</button>
+    <script>
+      function handleCSVData(data) {
+        var datasetSubscriptionsConsumedList = [];
+        var datasetSubscriptionsCapacityList = [];
+
+        $.each(data, function(idx, obj) {
+          var consumedObj = new Object();
+          var capacityObj = new Object();
+          var myMoment = moment(obj.date).format()
+          consumedObj['t'] = myMoment;
+          consumedObj['y'] = obj.consumed;
+          capacityObj['t'] = myMoment;
+          capacityObj['y'] = obj.capacity;
+          datasetSubscriptionsConsumedList.push(consumedObj);
+          datasetSubscriptionsCapacityList.push(capacityObj);
+        });
+        console.log(datasetSubscriptionsConsumedList);
+        console.log(datasetSubscriptionsCapacityList);
+
+        console.log(myChart);
+        myChart.data.datasets[0].data = datasetSubscriptionsConsumedList;
+        myChart.data.datasets[1].data = datasetSubscriptionsCapacityList;
+        myChart.update();
+      }
+
+      var ctx = document.getElementById('myChart').getContext('2d');
+      ctx.canvas.width = 1000;
+      ctx.canvas.height = 300;
+
+      var color = Chart.helpers.color;
+      var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          datasets: [{
+            label: 'Subscriptions Consumed',
+            data: [],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1,
+            steppedLine: true
+          }, {
+            label: 'Subscriptions Capacity',
+            data: [],
+            type: 'line',
+            steppedLine: true
+          }]
+        },
+        options: {},
+      });
+
+      myChart.options = {
+        animation: {
+          duration: 0
+        },
+        scales: {
+          xAxes: [{
+            type: 'time',
+            distribution: 'series',
+            time: {
+              unit: 'quarter',
+              displayFormats: {
+                day: 'MMM DD YYYY',
+                quarter: 'MMM YYYY'
+              }
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
+      }
+
+      var jqxhr = $.ajax({
+        type: "GET",
+        url: "https://raw.githubusercontent.com/xpros/html-with-chartjs-dashboard/main/data/test-data.csv",
+        dataType: "text"
+      }).done(function(response, textStatus, jqXHR) {
+        var data = $.csv.toObjects(response);
+        handleCSVData(data);
+      });
+
+      document.getElementById('update').addEventListener('click', function() {
+        var unit = document.getElementById('unit').value;
+        console.log(unit);
+        myChart.options.scales.xAxes[0].time.unit = unit;
+        myChart.update();
+      });
+    </script>
+  </body>
+</html>
